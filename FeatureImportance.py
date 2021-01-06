@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+import base64
 
 
 class StatusMessages:
@@ -13,6 +14,13 @@ class StatusMessages:
 
     def messages(self):
         return "\n".join(self.message_list)
+
+
+def download_csv(df, text):
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="FeatureImportance.csv">** {text} **</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 
 status = StatusMessages()
@@ -61,7 +69,10 @@ if uploaded_file is not None:
         with st.spinner(text='Calculating importance'):
             importances = list(model.feature_importances_)
             feature_importances = [(feature, importance) for feature, importance in zip(X.columns, importances)]
-
+            feature_csv = pd.DataFrame(
+                sorted(feature_importances, key=lambda x: x[1], reverse=True),
+                columns=['Feature', 'Importance']
+            )
             # Sorting by most important first
             feature_importances = pd.DataFrame(
                 sorted(feature_importances, key=lambda x: x[1], reverse=True),
@@ -79,3 +90,4 @@ if complete:
     max = feature_importances.idxmax(axis=0)[0]
     min = feature_importances.idxmin(axis=0)[0]
     st.markdown(f'Most important feature: **{max}**  \nLeast important feature: **{min}**')
+    download_csv(feature_csv, 'Download as .csv')
